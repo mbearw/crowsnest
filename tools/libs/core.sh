@@ -66,6 +66,14 @@ is_raspberry_pi() {
         echo "0"
     fi
 }
+is_btt_board() {
+    if [[ -f /proc/device-tree/model ]] &&
+    grep -q "BigTreeTech CB1" /proc/device-tree/model; then
+        echo "1"
+    else
+        echo "0"
+    fi
+}
 
 is_pi5() {
     if [[ -f /proc/device-tree/model ]] &&
@@ -96,8 +104,10 @@ is_speederpad() {
 
 test_load_module() {
     if modprobe -n "${1}" &> /dev/null; then
+        echo "modprobe ${1} succeeded"
         echo 1
     else
+        echo "modprobe ${1} failed"
         echo 0
     fi
 }
@@ -112,6 +122,14 @@ shallow_cs_dependencies_check() {
         return 1
     fi
     status_msg "Checking if device is a Raspberry Pi ..." "0"
+
+    msg "Checking if device is a BTT board ...\n"
+    if [[ "$(is_btt_board)" = "0" ]]; then
+        status_msg "Checking if device is a BTT board ..." "3"
+        msg "This device is a BTT board therefore camera-streeamer cannot be installed ..."
+        return 1
+    fi
+    status_msg "Checking if device is a BTT board ..." "0"
 
     msg "Checking if device is not a Raspberry Pi 5 ...\n"
     if [[ "$(is_pi5)" = "1" ]]; then
@@ -131,6 +149,7 @@ shallow_cs_dependencies_check() {
 
     msg "Checking for required kernel module ...\n"
     SHALLOW_CHECK_MODULESLIST="bcm2835_codec"
+    msg "$(test_load_module ${SHALLOW_CHECK_MODULESLIST})"
     if [[ "$(test_load_module ${SHALLOW_CHECK_MODULESLIST})" = "0" ]]; then
         status_msg "Checking for required kernel module ..." "3"
         msg "Not all required kernel modules for camera-streamer can be loaded ..."
